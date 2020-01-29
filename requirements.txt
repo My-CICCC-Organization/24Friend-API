@@ -1,0 +1,8 @@
+google-api-python-client
+google-cloud-bigquery
+firebase_admin
+time
+http
+google
+google.cloud
+google-cloud-python
