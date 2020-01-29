@@ -5,7 +5,7 @@ from firebase_admin import credentials
 from firebase_admin import firestore
 
 def get_collection(collection_name):
-    cred = credentials.Certificate("bubbly-trail-265822-firebase-adminsdk-j626j-15bb74f9a4.json")
+    cred = credentials.Certificate("firebase_admin.json")
     firebase_admin.initialize_app(cred)
 
     db = firestore.client()
