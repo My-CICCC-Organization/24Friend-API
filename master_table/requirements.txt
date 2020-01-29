@@ -1,0 +1,6 @@
+google-api-python-client
+google-cloud-bigquery
+firebase_admin
+google
+google.cloud
+flask
