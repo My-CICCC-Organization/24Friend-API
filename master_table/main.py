@@ -22,7 +22,7 @@ def get_city(request):
 
     for doc in docs:
 
-        city_dict = {doc.id: doc.to_dict()['name']}
+        city_dict = {'doc_id': doc.id, 'name': doc.to_dict()['name']}
         response_dict['city'].append(city_dict)
 
     return response_dict
@@ -36,7 +36,7 @@ def get_language(request):
     }
 
     for doc in docs:
-        language_dict = {doc.id: doc.to_dict()['name']}
+        language_dict = {'doc_id': doc.id, 'name': doc.to_dict()['name']}
         response_dict['language'].append(language_dict)
 
     return response_dict
