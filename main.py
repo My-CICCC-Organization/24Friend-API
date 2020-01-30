@@ -39,6 +39,7 @@ def set_user_survey(request):
         u'nickname': request_json['nickname'],
         u'city_doc_id': request_json['city_doc_id'],
         u'languages': request_json['languages'],
+        u'registration_token': request_json['registration_token']
     }
     user.set(survey)
 
@@ -122,7 +123,7 @@ def delete_room():
         room.set({u'ended_at': datetime.datetime.now()})
 
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
     # delete_room()
     # data = {
     #     "user_doc_id": "o4c2Uca0q1D3Dz90U1ta",
