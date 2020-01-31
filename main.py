@@ -47,13 +47,12 @@ def set_user_survey(request):
 
 
 def match_room(request):
-    # request_json = request.get_json(silent=True)
-    request_json = request
+    request_json = request.get_json(silent=True)
     collection = get_collection('room')
     room = collection \
         .where(u'city_doc_id', u'==', request_json['city_doc_id']) \
         .where(u'languages', u'array_contains_any', request_json['languages']) \
-        .where(u'last_user_doc_id', u'==', None).get()
+        .where(u'last_user_doc_id', u'==', None).stream()
 
     match_room = None
     for r in room:
@@ -63,10 +62,11 @@ def match_room(request):
     if match_room:
         data = {
             u'last_user_doc_id': request_json['user_doc_id'],
-            u'started_at': datetime.datetime.now()
+            u'started_at': str(datetime.datetime.now())
         }
-        set_room = match_room.update(data)
-        return set_room
+        match_room.update(data)
+        set_room = collection.document(match_room.id).get()
+        return str(set_room.to_dict())
 
 
     else:
@@ -81,8 +81,8 @@ def match_room(request):
         new_room = collection.add(data)
 
         collection = get_collection('room')
-        user = collection.document(new_room[1].id).get()
-        return user.to_dict()
+        room = collection.document(new_room[1].id).get()
+        return str(room.to_dict())
 
 
 def post_chat(request):
@@ -92,7 +92,7 @@ def post_chat(request):
         u'message': request_json['message'],
         u'room_doc_id': request_json['room_doc_id'],
         u'user_doc_id': request_json['user_doc_id'],
-        u'created_at': datetime.datetime.now()
+        u'created_at': str(datetime.datetime.now())
     }
 
     collection.document().set(chat)
@@ -108,7 +108,7 @@ def exit_room(request):
         return str(http.HTTPStatus.INTERNAL_SERVER_ERROR.value)
     else:
         data = {
-            u'ended_at': datetime.datetime.now()
+            u'ended_at': str(datetime.datetime.now())
         }
         room.update(data)
 
@@ -117,14 +117,13 @@ def exit_room(request):
 
 def delete_room():
     room_collection = get_collection('room')
-    rooms = room_collection.where(u'created_at', u'>', datetime.datetime.now() + datetime.timedelta(days=-1)).stream()
+    rooms = room_collection.where(u'created_at', u'>', str(datetime.datetime.now()) + datetime.timedelta(days=-1)).stream()
 
     for room in rooms:
-        room.set({u'ended_at': datetime.datetime.now()})
+        room.set({u'ended_at': str(datetime.datetime.now())})
 
 
 # if __name__ == '__main__':
-    # delete_room()
     # data = {
     #     "user_doc_id": "o4c2Uca0q1D3Dz90U1ta",
     #     "city_doc_id": "AzsfgA3tgjjolk9F9",
