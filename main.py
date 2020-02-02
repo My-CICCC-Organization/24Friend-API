@@ -68,7 +68,7 @@ def set_user_survey(request):
             u'registration_token': request_json['data']['registration_token']
         }
         user_ref.set(survey)
-        response_dict = {'code': 200}
+        response_dict = {'code': str(http.HTTPStatus.OK.value)}
         return _json(response_dict)
     else:
         _json_abort(405, 'Method Not Allowed')
@@ -114,22 +114,34 @@ def match_room(request):
 
 
 def post_chat(request):
+    _print_access_log(request)
+
     request_json = request.get_json(silent=True)
-    collection = get_collection(u'chat')
-    chat = {
-        u'message': request_json['message'],
-        u'room_doc_id': request_json['room_doc_id'],
-        u'user_doc_id': request_json['user_doc_id'],
-        u'created_at': str(datetime.datetime.now())
-    }
+    if request_json is None or "data" not in request_json:
+        _json_abort(400, 'Bad Request')
 
-    collection.document().set(chat)
-
-    return str(http.HTTPStatus.OK.value)
+    if request.method == 'POST':
+        collection = get_collection(u'chat')
+        chat = {
+            u'message': request_json['data']['message'],
+            u'room_doc_id': request_json['data']['room_doc_id'],
+            u'user_doc_id': request_json['data']['user_doc_id'],
+            u'created_at': str(datetime.datetime.now())
+        }
+        collection.document().create(chat)
+        response_dict = {'code': str(http.HTTPStatus.OK.value)}
+        return _json(response_dict)
+    else:
+        _json_abort(405, 'Method Not Allowed')
 
 
 def exit_room(request):
+    _print_access_log(request)
+
     request_json = request.get_json(silent=True)
+    if request_json is None or "data" not in request_json:
+        _json_abort(400, 'Bad Request')
+
     collection = get_collection('room')
     room = collection.document(request_json['room_doc_id'])
     if not room:
@@ -144,6 +156,7 @@ def exit_room(request):
 
 
 def delete_room():
+
     room_collection = get_collection('room')
     rooms = room_collection.where(u'created_at', u'>', str(datetime.datetime.now()) + datetime.timedelta(days=-1)).stream()
 
