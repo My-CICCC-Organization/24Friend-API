@@ -1,3 +1,4 @@
+from flask import jsonify, abort
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
@@ -15,35 +16,62 @@ def get_collection(collection_name):
 
 
 def get_user(request):
-    request_json = request.get_json(silent=True)
-    collection = get_collection('user')
-    user = collection.document(request_json['user_doc_id']).get()
-    if user.exists:
-        return '{}'.format((request_json['user_doc_id']))
+    _print_access_log(request)
 
+    request_json = request.get_json(silent=True)
+    if request_json is None or "data" not in request_json:
+        _json_abort(400, 'Bad Request')
+
+    if request.method == 'POST':
+
+        collection = get_collection('user')
+
+        # TODO
+        if request_json['data']['user_doc_id'] == "":
+            data = {
+            }
+            new_user = collection.add(data)
+            response_dict = {'user_doc_id': new_user[1].id}
+            return _json(response_dict)
+
+        user = collection.document(request_json['data']['user_doc_id']).get()
+        if user.exists:
+            response_dict = {'user_doc_id': request_json['data']['user_doc_id']}
+            return _json(response_dict)
+        else:
+            data = {
+            }
+            new_user = collection.add(data)
+            response_dict = {'user_doc_id': new_user[1].id}
+            return _json(response_dict)
     else:
-        data = {
-        }
-        new_user = collection.add(data)
-        return '{}'.format((new_user[1].id))
+        _json_abort(405, 'Method Not Allowed')
 
 
 def set_user_survey(request):
+    _print_access_log(request)
+
     request_json = request.get_json(silent=True)
+    if request_json is None or "data" not in request_json:
+        _json_abort(400, 'Bad Request')
+
     collection = get_collection('user')
-    user = collection.document(request_json['user_doc_id'])
-    if not user:
-        return str(http.HTTPStatus.INTERNAL_SERVER_ERROR.value)
+    user_ref = collection.document(request_json['data']['user_doc_id'])
+    if not user_ref.get().exists:
+        _json_abort(404, 'Not found')
 
-    survey = {
-        u'nickname': request_json['nickname'],
-        u'city_doc_id': request_json['city_doc_id'],
-        u'languages': request_json['languages'],
-        u'registration_token': request_json['registration_token']
-    }
-    user.set(survey)
-
-    return str(http.HTTPStatus.OK.value)
+    if request.method == 'POST':
+        survey = {
+            u'nickname': request_json['data']['nickname'],
+            u'city_doc_id': request_json['data']['city_doc_id'],
+            u'languages': request_json['data']['languages'],
+            u'registration_token': request_json['data']['registration_token']
+        }
+        user_ref.set(survey)
+        response_dict = {'code': 200}
+        return _json(response_dict)
+    else:
+        _json_abort(405, 'Method Not Allowed')
 
 
 def match_room(request):
@@ -122,6 +150,36 @@ def delete_room():
     for room in rooms:
         room.set({u'ended_at': str(datetime.datetime.now())})
 
+
+def _json(data):
+    data = {
+        'data': data
+    }
+    response = jsonify(data)
+    response.status_code = 200
+    response.headers.add('Content-Type', 'charset=utf-8')
+    return response
+
+
+def _json_abort(status_code, message):
+    data = {
+        'error': {
+            'code': status_code,
+            'message': message
+        }
+    }
+    response = jsonify(data)
+    response.status_code = status_code
+    response.headers.add('Content-Type', 'charset=utf-8')
+    abort(response)
+
+
+def _print_access_log(request):
+    request_json = request.get_json(silent=True)
+    print('[ACCESS LOG] START')
+    print("Method: ", request.method)
+    print("Request body: ", request_json)
+    print('[ACCESS LOG] END')
 
 # if __name__ == '__main__':
     # data = {
