@@ -143,16 +143,16 @@ def exit_room(request):
         _json_abort(400, 'Bad Request')
 
     collection = get_collection('room')
-    room = collection.document(request_json['room_doc_id'])
-    if not room:
-        return str(http.HTTPStatus.INTERNAL_SERVER_ERROR.value)
+    room_ref = collection.document(request_json['data']['room_doc_id'])
+    if not room_ref.get().exists:
+        _json_abort(404, 'Not found')
     else:
         data = {
             u'ended_at': str(datetime.datetime.now())
         }
-        room.update(data)
-
-        return str(http.HTTPStatus.OK.value)
+        room_ref.update(data)
+        response_dict = {'code': str(http.HTTPStatus.OK.value)}
+        return _json(response_dict)
 
 
 def delete_room():
@@ -165,6 +165,9 @@ def delete_room():
 
 
 def _json(data):
+    # TODO remove later
+    print("Response body: ", data)
+
     data = {
         'data': data
     }
