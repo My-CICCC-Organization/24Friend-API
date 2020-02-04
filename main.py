@@ -75,42 +75,49 @@ def set_user_survey(request):
 
 
 def match_room(request):
+    _print_access_log(request)
+
     request_json = request.get_json(silent=True)
+    if request_json is None or "data" not in request_json:
+        _json_abort(400, 'Bad Request')
+
     collection = get_collection('room')
-    room = collection \
-        .where(u'city_doc_id', u'==', request_json['city_doc_id']) \
-        .where(u'languages', u'array_contains_any', request_json['languages']) \
-        .where(u'last_user_doc_id', u'==', None).stream()
+    if request.method == 'POST':
+        room_refs = collection \
+            .where(u'city_doc_id', u'==', request_json['data']['city_doc_id']) \
+            .where(u'languages', u'array_contains_any', request_json['data']['languages']) \
+            .where(u'last_user_doc_id', u'==', None).stream()
 
-    match_room = None
-    for r in room:
-        match_room = collection.document(r.id)
-        break
+        match_room = None
+        for r in room_refs:
+            match_room = collection.document(r.id)
+            break
 
-    if match_room:
-        data = {
-            u'last_user_doc_id': request_json['user_doc_id'],
-            u'started_at': str(datetime.datetime.now())
-        }
-        match_room.update(data)
-        set_room = collection.document(match_room.id).get()
-        return str(set_room.to_dict())
+        if match_room:
+            data = {
+                u'last_user_doc_id': request_json['user_doc_id'],
+                u'started_at': str(datetime.datetime.now())
+            }
+            match_room.update(data)
+            set_room = collection.document(match_room.id).get()
 
+            return _json(set_room.to_dict())
+        else:
+            data = {
+                u'first_user_doc_id': request_json['user_doc_id'],
+                u'last_user_doc_id': None,
+                u'city_doc_id': request_json['city_doc_id'],
+                u'languages': request_json['languages'],
+                u'started_at': None,
+                u'ended_at': None
+            }
+            new_room = collection.add(data)
 
+            collection = get_collection('room')
+            room_refs = collection.document(new_room[1].id).get()
+            return _json(room_refs.to_dict())
     else:
-        data = {
-            u'first_user_doc_id': request_json['user_doc_id'],
-            u'last_user_doc_id': None,
-            u'city_doc_id': request_json['city_doc_id'],
-            u'languages': request_json['languages'],
-            u'started_at': None,
-            u'ended_at': None
-        }
-        new_room = collection.add(data)
-
-        collection = get_collection('room')
-        room = collection.document(new_room[1].id).get()
-        return str(room.to_dict())
+        _json_abort(405, 'Method Not Allowed')
 
 
 def post_chat(request):
@@ -156,7 +163,6 @@ def exit_room(request):
 
 
 def delete_room():
-
     room_collection = get_collection('room')
     rooms = room_collection.where(u'created_at', u'>', str(datetime.datetime.now()) + datetime.timedelta(days=-1)).stream()
 
