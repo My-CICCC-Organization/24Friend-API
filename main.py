@@ -83,39 +83,48 @@ def match_room(request):
 
     collection = get_collection('room')
     if request.method == 'POST':
-        room_refs = collection \
+        new_room_refs = collection \
             .where(u'city_doc_id', u'==', request_json['data']['city_doc_id']) \
             .where(u'languages', u'array_contains_any', request_json['data']['languages']) \
             .where(u'last_user_doc_id', u'==', None).stream()
 
-        match_room = None
-        for r in room_refs:
-            match_room = collection.document(r.id)
+        match_room_ref = None
+        for r in new_room_refs:
+            match_room_ref = collection.document(r.id)
             break
 
-        if match_room:
+        if match_room_ref:
+            print("MATCH")
             data = {
-                u'last_user_doc_id': request_json['user_doc_id'],
+                u'last_user_doc_id': request_json['data']['user_doc_id'],
                 u'started_at': str(datetime.datetime.now())
             }
-            match_room.update(data)
-            set_room = collection.document(match_room.id).get()
+            match_room_ref.update(data)
+            set_room = collection.document(match_room_ref.id).get()
 
-            return _json(set_room.to_dict())
+            room_dict = set_room.to_dict()
+            room_dict['room_doc_id'] = set_room.id
+
+            return _json(room_dict)
         else:
+            print("NOT MATCH")
             data = {
-                u'first_user_doc_id': request_json['user_doc_id'],
+                u'first_user_doc_id': request_json['data']['user_doc_id'],
                 u'last_user_doc_id': None,
-                u'city_doc_id': request_json['city_doc_id'],
-                u'languages': request_json['languages'],
+                u'city_doc_id': request_json['data']['city_doc_id'],
+                u'languages': request_json['data']['languages'],
                 u'started_at': None,
                 u'ended_at': None
             }
-            new_room = collection.add(data)
+            new_room_refs = collection.add(data)
 
             collection = get_collection('room')
-            room_refs = collection.document(new_room[1].id).get()
-            return _json(room_refs.to_dict())
+            new_room = collection.document(new_room_refs[1].id).get()
+
+            room_dict = new_room.to_dict()
+            room_dict['room_doc_id'] = new_room.id
+
+            return _json(room_dict)
     else:
         _json_abort(405, 'Method Not Allowed')
 
